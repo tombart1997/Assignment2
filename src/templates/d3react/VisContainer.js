@@ -1,77 +1,52 @@
-import './VisContainer.css'
+import './VisContainer.css';
 import { useEffect, useRef } from 'react';
-import {useSelector, useDispatch} from 'react-redux'
-
+import { useSelector, useDispatch } from 'react-redux';
 import VisD3 from './Vis-d3';
 
-// TODO: import action methods from reducers
-
-function VisContainer(){
-    const visData = useSelector(state =>state.visDataSlice)
+function VisContainer() {
+    const visData = useSelector((state) => state.dataSet.data); // Full dataset
     const dispatch = useDispatch();
 
-    // every time the component re-render
-    useEffect(()=>{
-        console.log("VisContainer useEffect (called each time matrix re-renders)");
-    }); // if no dependencies, useEffect is called at each re-render
+    const divContainerRef = useRef(null);
+    const visD3Ref = useRef(null);
 
-    const divContainerRef=useRef(null);
-    const visD3Ref = useRef(null)
-
-    const getCharSize = function(){
-        // fixed size
-        // return {width:900, height:900};
-        // getting size from parent item
-        let width;// = 800;
-        let height;// = 100;
-        if(divContainerRef.current!==undefined){
-            width=divContainerRef.current.offsetWidth;
-            // width = '100%';
-            height=divContainerRef.current.offsetHeight;
-            // height = '100%';
+    const getCharSize = function () {
+        let width, height;
+        if (divContainerRef.current) {
+            width = divContainerRef.current.offsetWidth;
+            height = divContainerRef.current.offsetHeight;
         }
-        return {width:width,height:height};
-    }
+        return { width, height };
+    };
 
-    // did mount called once the component did mount
-    useEffect(()=>{
-        console.log("VisContainer useEffect [] called once the component did mount");
+    useEffect(() => {
         const visD3 = new VisD3(divContainerRef.current);
-        visD3.create({size:getCharSize()});
+        visD3.create({ size: getCharSize() });
         visD3Ref.current = visD3;
-        return ()=>{
-            // did unmout, the return function is called once the component did unmount (removed for the screen)
-            console.log("VisContainer useEffect [] return function, called when the component did unmount...");
-            const visD3 = visD3Ref.current;
-            visD3.clear()
-        }
-    },[]);// if empty array, useEffect is called after the component did mount (has been created)
 
-    // did update, called each time dependencies change, dispatch remain stable over component cycles
-    useEffect(()=>{
-        console.log("VisContainer useEffect with dependency [visData,dispatch], called each time visData changes...");
+        return () => {
+            const visD3 = visD3Ref.current;
+            visD3.clear(); // Cleanup
+        };
+    }, []);
+
+    useEffect(() => {
         const visD3 = visD3Ref.current;
 
-        const handleOnEvent1 = function(payload){
-            // do something
-            // call dispatch(reducerAction1(payload));
-        }
-        const handleOnEvent2 = function(payload){
-            // do something
-            // call dispatch(reducerAction1(payload));
-        }
-        const controllerMethods={
-            handleOnEvent1: handleOnEvent1,
-            handleOnEvent2: handleOnEvent2,
-        }
-        visD3.renderVis(visData,controllerMethods);
-    },[visData,dispatch]);// if dependencies, useEffect is called after each data update, in our case only visData changes.
+        const handleOnEvent1 = function (selectedData) {
+            console.log("Heatmap 1D/2D Selection:", selectedData);
+            // Dispatch selected data if needed
+            // dispatch(reducerAction(selectedData));
+        };
 
-    return(
-        <div ref={divContainerRef} className="visDivContainer">
+        const controllerMethods = {
+            handleOnEvent1,
+        };
 
-        </div>
-    )
+        visD3.renderHeatmap(visData, controllerMethods); // Call heatmap rendering
+    }, [visData, dispatch]);
+
+    return <div ref={divContainerRef} className="visDivContainer"></div>;
 }
 
 export default VisContainer;
