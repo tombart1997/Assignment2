@@ -29,7 +29,7 @@ function App() {
           <ScatterplotContainer />
 
           {/* <YourVisContainer/> */}
-          <VisContainer />
+          <VisContainer /> 
 
         </div>
     </div>

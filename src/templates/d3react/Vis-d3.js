@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 
 class VisD3 {
-    margin = { top: 100, right: 5, bottom: 5, left: 100 };
+    margin = { top: 0, right: 5, bottom: 0, left: 50 };
     size;
     height;
     width;
@@ -17,45 +17,122 @@ class VisD3 {
     constructor(el) {
         this.el = el;
     }
-
+    
     create = function (config) {
         this.size = { width: config.size.width, height: config.size.height };
-
+    
         // Calculate dimensions
         this.width = this.size.width - this.margin.left - this.margin.right;
-        this.height = this.size.height - this.margin.top - this.margin.bottom;
-
+        this.height = (this.size.height - this.margin.top) / 2; // Divide evenly between plots
+    
         // Define ranges for both graphs
         this.scatterScaleX.range([0, this.width]);
         this.scatterScaleY.range([this.height, 0]); // Reverse y-axis
         this.densityScaleX.range([0, this.width]);
         this.densityScaleY.range([this.height, 0]);
-
+    
         // Initialize SVG
         this.matSvg = d3.select(this.el).append("svg")
             .attr("width", this.width + this.margin.left + this.margin.right)
-            .attr("height", this.height * 2 + this.margin.top + this.margin.bottom)
+            .attr("height", this.height * 2 + this.margin.top) // Adjusted height
             .append("g")
             .attr("class", "matSvgG")
             .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
-
+    
         // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
             .attr("class", "scatterplotG");
-
-        // Add density plot group below the scatterplot
+    
+        // Add density plot group below scatterplot
         this.densityPlotG = this.matSvg.append("g")
             .attr("class", "densityPlotG")
-            .attr("transform", `translate(0, ${this.height + 50})`);
-
-        // Add axes for scatterplot
-        this.scatterplotG.append('g')
+            .attr("transform", `translate(0, ${this.height})`);
+    
+        // Add axes for scatterplot (ONLY ONCE)
+        this.scatterplotG.append('g') // X-Axis
             .attr('transform', `translate(0, ${this.height})`)
             .call(d3.axisBottom(this.scatterScaleX));
-
-        this.scatterplotG.append('g')
+    
+        this.scatterplotG.append('g') // Y-Axis
             .call(d3.axisLeft(this.scatterScaleY));
+    
+        // Add axes for density plot (ONLY ONCE)
+        this.densityPlotG.append('g') // X-Axis
+            .attr('transform', `translate(0, ${this.height})`)
+            .call(d3.axisBottom(this.densityScaleX));
+    
+        this.densityPlotG.append('g') // Y-Axis
+            .call(d3.axisLeft(this.densityScaleY));
+    
+        // Add x-axis label for scatterplot
+        this.scatterplotG.append("text")
+            .attr("class", "x-axis-label")
+            .attr("x", this.width / 2)
+            .attr("y", this.height + 40) // Position below the x-axis
+            .style("text-anchor", "middle")
+            .text("Temperature (°C)");
+    
+        // Add y-axis label for scatterplot
+        this.scatterplotG.append("text")
+            .attr("class", "y-axis-label")
+            .attr("x", -this.height / 2)
+            .attr("y", -40) // Position to the left of the y-axis
+            .attr("transform", "rotate(-90)")
+            .style("text-anchor", "middle")
+            .text("Rented Bike Count");
+    
+        // Add x-axis label for density plot
+        this.densityPlotG.append("text")
+            .attr("class", "x-axis-label")
+            .attr("x", this.width / 2)
+            .attr("y", this.height + 40) // Position below the x-axis
+            .style("text-anchor", "middle")
+            .text("Temperature (°C)");
+    
+        // Add y-axis label for density plot
+        this.densityPlotG.append("text")
+            .attr("class", "y-axis-label")
+            .attr("x", -this.height / 2)
+            .attr("y", -40) // Position to the left of the y-axis
+            .attr("transform", "rotate(-90)")
+            .style("text-anchor", "middle")
+            .text("Density");
     };
+    
+    
+
+    addZoom = function () {
+        const zoom = d3.zoom()
+            .scaleExtent([1, 10]) // Define zoom limits
+            .translateExtent([[0, 0], [this.width, this.height * 2]]) // Allow zooming over the full area
+            .on("zoom", (event) => {
+                const transform = event.transform;
+    
+                // Rescale the scatterplot and density scales
+                const newX = transform.rescaleX(this.scatterScaleX);
+                const newY = transform.rescaleY(this.scatterScaleY);
+    
+                this.scatterScaleX.domain(newX.domain());
+                this.scatterScaleY.domain(newY.domain());
+    
+                this.densityScaleX.domain(newX.domain());
+                this.densityScaleY.domain(newY.domain());
+    
+                // Redraw scatterplot
+                this.scatterplotG.selectAll("circle")
+                    .attr("cx", (d) => this.scatterScaleX(d.Temperature))
+                    .attr("cy", (d) => this.scatterScaleY(d.RentedBikeCount));
+    
+                this.scatterplotG.select(".x-axis").call(d3.axisBottom(this.scatterScaleX));
+                this.scatterplotG.select(".y-axis").call(d3.axisLeft(this.scatterScaleY));
+    
+                // Redraw density plot
+                this.renderDensityPlot(this.selectedData.length ? this.selectedData : this.fullData);
+            });
+    
+        d3.select(this.el).call(zoom);
+    };
+    
 
     renderScatterPlot = function (visData, controllerMethods) {
         const minVal_t = d3.min(visData, (d) => d.Temperature);
