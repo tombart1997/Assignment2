@@ -242,6 +242,65 @@ class VisD3 {
             .attr("class", "brush")
             .call(brush);
     };
+
+addBrushToDensityPlot = function (visData) {
+
+    const brush = d3.brush()
+        .extent([[0, 0], [this.width, this.height]]) // Define the brushing area
+
+        .on("brush", ({ selection }) => {
+                   
+            if (!selection || selection.length < 2) {
+                console.warn("Brush selection is invalid or undefined");
+                return;
+            }
+            
+            const [[x0, y0], [x1, y1]] = selection;
+
+            // Map the brushed area to the density plot's scales
+            const newXDomain = [this.densityScaleX.invert(x0), this.densityScaleX.invert(x1)];
+            const newYDomain = [this.densityScaleY.invert(y1), this.densityScaleY.invert(y0)];
+
+            // Filter the data within the selected area
+            this.selectedData = visData.filter((d) => {
+                const cx = this.densityScaleX(d.Temperature);
+                const cy = this.densityScaleY(d.RentedBikeCount);
+                return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
+            });
+            // Optionally highlight the selected region
+            this.densityPlotG.selectAll(".density-path")
+                .attr("opacity", (d) => {
+                    if (!d.coordinates || !d.coordinates[0] || !d.coordinates[0][0] || !d.coordinates[0][1]) {
+                        // If coordinates are not valid, skip this contour
+                        return 0.3;
+                    }
+
+                    const contourMidX = (d.coordinates[0][0][0] + d.coordinates[0][1][0]) / 2;
+                    const contourMidY = (d.coordinates[0][0][1] + d.coordinates[0][1][1]) / 2;
+
+                    return (x0 <= contourMidX && contourMidX <= x1 && y0 <= contourMidY && contourMidY <= y1) ? 1 : 0.3;
+                });
+
+        })    
+
+        .on("end", ({ selection }) => {
+            if (!selection) {
+                console.log("Brush cleared, resetting density plot");
+                this.selectedData = [];
+                this.densityPlotG.selectAll(".density-path").attr("opacity", 1);
+                return;
+            }
+            console.log("Brush end selection:", selection);
+        });
+
+    // Append the brush to the density plot group
+    this.densityPlotG.append("g")
+        .attr("class", "density-brush")
+        .call(brush);
+ 
+};
+
+    
     
 
     renderDensityPlot = function (visData) {
@@ -277,6 +336,9 @@ class VisD3 {
             .attr("fill", (d) => colorScale(d.value))
             .attr("stroke", "none")
             .attr("opacity", 0.7);
+
+            this.addBrushToDensityPlot(visData);
+
     };
     
 
