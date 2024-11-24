@@ -42,8 +42,8 @@ function VisContainer() {
         const controllerMethods = {
             handleOnEvent1,
         };
-
-        visD3.renderHeatmap(visData, controllerMethods); // Call heatmap rendering
+        visD3.renderDensityPlot(visData)
+        //visD3.renderHeatmap(visData, controllerMethods); // Call heatmap rendering
     }, [visData, dispatch]);
 
     return <div ref={divContainerRef} className="visDivContainer"></div>;
