@@ -119,68 +119,72 @@ class VisD3 {
             .on("brush", ({ selection }) => {
                 if (selection) {
                     const [[x0, y0], [x1, y1]] = selection;
-
-                    // Filter the data within the selected rectangle
+    
+                    // Update scatterplot scales
+                    const newXDomain = [this.scatterScaleX.invert(x0), this.scatterScaleX.invert(x1)];
+                    const newYDomain = [this.scatterScaleY.invert(y1), this.scatterScaleY.invert(y0)]; // Note y-axis is inverted
+    
+                    // Filter data based on the brush selection
                     this.selectedData = visData.filter((d) => {
                         const cx = this.scatterScaleX(d.Temperature);
                         const cy = this.scatterScaleY(d.RentedBikeCount);
                         return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
                     });
-
-                    // Highlight the selected points in the scatterplot
+    
+                    // Highlight selected points in the scatterplot
                     this.scatterplotG.selectAll("circle")
                         .attr("opacity", (d) => {
                             const cx = this.scatterScaleX(d.Temperature);
                             const cy = this.scatterScaleY(d.RentedBikeCount);
                             return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1 ? 1 : 0.2;
                         });
-
-                    // Update the density plot with the selected data
+    
+                    // Update density plot scales and render
+                    this.densityScaleX.domain(newXDomain);
+                    this.densityScaleY.domain(newYDomain);
                     this.renderDensityPlot(this.selectedData);
                 }
             })
             .on("end", ({ selection }) => {
                 if (!selection) {
-                    // Reset everything if the brush selection is cleared
+                    // Reset everything when the brush is cleared
                     this.selectedData = [];
-                    this.scatterplotG.selectAll("circle").attr("opacity", 1); // Reset scatterplot points
-                    //this.renderDensityPlot(visData);
+                    this.scatterplotG.selectAll("circle").attr("opacity", 1); // Reset opacity
+                    this.densityScaleX.domain(this.scatterScaleX.domain());
+                    this.densityScaleY.domain(this.scatterScaleY.domain());
+                    this.renderDensityPlot(visData); // Render full density plot
                 }
             });
-
+    
         // Append the brush to the scatterplot group
         this.scatterplotG.append("g")
             .attr("class", "brush")
             .call(brush);
     };
+    
 
     renderDensityPlot = function (visData) {
-        // Update density plot scales
-        const minVal_t = d3.min(visData, (d) => d.Temperature);
-        const maxVal_t = d3.max(visData, (d) => d.Temperature);
-        this.densityScaleX.domain([minVal_t, maxVal_t]);
-
-        const minVal_b = d3.min(visData, (d) => d.RentedBikeCount);
-        const maxVal_b = d3.max(visData, (d) => d.RentedBikeCount);
-        this.densityScaleY.domain([minVal_b, maxVal_b]);
-
-        // Clear any existing density paths in the density plot group
+        // Set density plot scales to match scatterplot
+        this.densityScaleX.domain(this.scatterScaleX.domain());
+        this.densityScaleY.domain(this.scatterScaleY.domain());
+    
+        // Clear any existing density paths
         this.densityPlotG.selectAll(".density-path").remove();
-
-        // Create a density generator using the filtered data
+    
+        // Create a density generator
         const densityGenerator = d3.contourDensity()
             .x((d) => this.densityScaleX(d.Temperature))
             .y((d) => this.densityScaleY(d.RentedBikeCount))
             .size([this.width, this.height])
             .bandwidth(20);
-
+    
         const contours = densityGenerator(visData);
-
+    
         // Define a color scale for the density plot
         const colorScale = d3.scaleSequential(d3.interpolateYlGnBu)
             .domain([0, d3.max(contours, (d) => d.value)]);
-
-        // Render the density plot in the densityPlotG group
+    
+        // Render the density plot
         this.densityPlotG.selectAll(".density-path")
             .data(contours)
             .join("path")
@@ -190,6 +194,8 @@ class VisD3 {
             .attr("stroke", "none")
             .attr("opacity", 0.7);
     };
+    
+
 
     clear = function () {
         d3.select(this.el).selectAll("*").remove();
