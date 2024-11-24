@@ -8,9 +8,10 @@ class VisD3 {
     matSvg;
     scatterplotG;
     densityPlotG;
-    scale1 = d3.scaleLinear(); // x-axis scale
-    scale2 = d3.scaleLinear(); // y-axis scale
-    colorScheme = d3.schemeYlGnBu[9];
+    scatterScaleX = d3.scaleLinear(); // Scatterplot x-axis scale
+    scatterScaleY = d3.scaleLinear(); // Scatterplot y-axis scale
+    densityScaleX = d3.scaleLinear(); // Density plot x-axis scale
+    densityScaleY = d3.scaleLinear(); // Density plot y-axis scale
     selectedData = []; // Store data selected via brushing
 
     constructor(el) {
@@ -20,48 +21,50 @@ class VisD3 {
     create = function (config) {
         this.size = { width: config.size.width, height: config.size.height };
 
-        // Calculate effective size of the view
+        // Calculate dimensions
         this.width = this.size.width - this.margin.left - this.margin.right;
         this.height = this.size.height - this.margin.top - this.margin.bottom;
 
-        // Set the range for the scales
-        this.scale1.range([0, this.width]);
-        this.scale2.range([this.height, 0]); // Reverse y-axis for SVG
+        // Define ranges for both graphs
+        this.scatterScaleX.range([0, this.width]);
+        this.scatterScaleY.range([this.height, 0]); // Reverse y-axis
+        this.densityScaleX.range([0, this.width]);
+        this.densityScaleY.range([this.height, 0]);
 
-        // Initialize the SVG container
+        // Initialize SVG
         this.matSvg = d3.select(this.el).append("svg")
             .attr("width", this.width + this.margin.left + this.margin.right)
-            .attr("height", this.height * 2 + this.margin.top + this.margin.bottom) // Double height for scatterplot + density plot
+            .attr("height", this.height * 2 + this.margin.top + this.margin.bottom)
             .append("g")
             .attr("class", "matSvgG")
             .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
 
-        // Add group for the scatterplot
+        // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
             .attr("class", "scatterplotG");
 
-        // Add group for the density plot (below scatterplot)
+        // Add density plot group below the scatterplot
         this.densityPlotG = this.matSvg.append("g")
             .attr("class", "densityPlotG")
-            .attr("transform", `translate(0, ${this.height + 50})`); // Position density plot below scatterplot
+            .attr("transform", `translate(0, ${this.height + 50})`);
 
-        // Add x and y axes for the scatterplot
+        // Add axes for scatterplot
         this.scatterplotG.append('g')
             .attr('transform', `translate(0, ${this.height})`)
-            .call(d3.axisBottom(this.scale1));
+            .call(d3.axisBottom(this.scatterScaleX));
 
         this.scatterplotG.append('g')
-            .call(d3.axisLeft(this.scale2));
+            .call(d3.axisLeft(this.scatterScaleY));
     };
 
-    renderVis = function (visData, controllerMethods) {
+    renderScatterPlot = function (visData, controllerMethods) {
         const minVal_t = d3.min(visData, (d) => d.Temperature);
         const maxVal_t = d3.max(visData, (d) => d.Temperature);
-        this.scale1.domain([minVal_t, maxVal_t]);
+        this.scatterScaleX.domain([minVal_t, maxVal_t]);
 
         const minVal_b = d3.min(visData, (d) => d.RentedBikeCount);
         const maxVal_b = d3.max(visData, (d) => d.RentedBikeCount);
-        this.scale2.domain([minVal_b, maxVal_b]);
+        this.scatterScaleY.domain([minVal_b, maxVal_b]);
 
         const processedData = visData.map((d, index) => ({
             ...d,
@@ -85,8 +88,8 @@ class VisD3 {
                         });
 
                     itemG.append("circle")
-                        .attr("cx", (d) => this.scale1(d.Temperature))
-                        .attr("cy", (d) => this.scale2(d.RentedBikeCount))
+                        .attr("cx", (d) => this.scatterScaleX(d.Temperature))
+                        .attr("cy", (d) => this.scatterScaleY(d.RentedBikeCount))
                         .attr("r", 2)
                         .attr("fill", "red");
 
@@ -101,80 +104,83 @@ class VisD3 {
             );
 
         this.addScatterplotBrush(controllerMethods, visData);
-
-        // Render initial density plot with all data
-        this.renderDensityPlot(visData);
     };
 
     updateFunction1 = function (selection) {
         selection.select("circle")
-            .attr("cx", (d) => this.scale1(d.x))
-            .attr("cy", (d) => this.scale2(d.y))
+            .attr("cx", (d) => this.scatterScaleX(d.x))
+            .attr("cy", (d) => this.scatterScaleY(d.y))
             .attr("fill", "red");
     };
 
     addScatterplotBrush = function (controllerMethods, visData) {
         const brush = d3.brush()
-            .extent([[0, 0], [this.width, this.height]])
+            .extent([[0, 0], [this.width, this.height]]) // Define the brushing area
             .on("brush", ({ selection }) => {
                 if (selection) {
                     const [[x0, y0], [x1, y1]] = selection;
 
-                    // Filter selected points
-                    this.selectedData = visData.filter(d => {
-                        const cx = this.scale1(d.Temperature);
-                        const cy = this.scale2(d.RentedBikeCount);
+                    // Filter the data within the selected rectangle
+                    this.selectedData = visData.filter((d) => {
+                        const cx = this.scatterScaleX(d.Temperature);
+                        const cy = this.scatterScaleY(d.RentedBikeCount);
                         return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
                     });
 
-                    // Highlight selected scatterplot points
+                    // Highlight the selected points in the scatterplot
                     this.scatterplotG.selectAll("circle")
                         .attr("opacity", (d) => {
-                            const cx = this.scale1(d.Temperature);
-                            const cy = this.scale2(d.RentedBikeCount);
+                            const cx = this.scatterScaleX(d.Temperature);
+                            const cy = this.scatterScaleY(d.RentedBikeCount);
                             return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1 ? 1 : 0.2;
                         });
 
-                    // Update density plot with selected points
+                    // Update the density plot with the selected data
                     this.renderDensityPlot(this.selectedData);
                 }
             })
             .on("end", ({ selection }) => {
                 if (!selection) {
-                    // Clear selection
+                    // Reset everything if the brush selection is cleared
                     this.selectedData = [];
-                    this.scatterplotG.select(".brush").call(brush.move, null);
-                    this.scatterplotG.selectAll("circle").attr("opacity", 1);
-
-                    // Reset density plot
-                    this.renderDensityPlot(visData);
+                    this.scatterplotG.selectAll("circle").attr("opacity", 1); // Reset scatterplot points
+                    //this.renderDensityPlot(visData);
                 }
             });
 
-        // Append brush to scatterplotG
+        // Append the brush to the scatterplot group
         this.scatterplotG.append("g")
             .attr("class", "brush")
             .call(brush);
     };
 
-    renderDensityPlot = function (data) {
-        // Remove existing density plot
+    renderDensityPlot = function (visData) {
+        // Update density plot scales
+        const minVal_t = d3.min(visData, (d) => d.Temperature);
+        const maxVal_t = d3.max(visData, (d) => d.Temperature);
+        this.densityScaleX.domain([minVal_t, maxVal_t]);
+
+        const minVal_b = d3.min(visData, (d) => d.RentedBikeCount);
+        const maxVal_b = d3.max(visData, (d) => d.RentedBikeCount);
+        this.densityScaleY.domain([minVal_b, maxVal_b]);
+
+        // Clear any existing density paths in the density plot group
         this.densityPlotG.selectAll(".density-path").remove();
 
-        // Create density generator
+        // Create a density generator using the filtered data
         const densityGenerator = d3.contourDensity()
-            .x((d) => this.scale1(d.Temperature))
-            .y((d) => this.scale2(d.RentedBikeCount))
-            .size([this.width, this.height]) // Match size of the density plot area
-            .bandwidth(20); // Adjust for smoothness
+            .x((d) => this.densityScaleX(d.Temperature))
+            .y((d) => this.densityScaleY(d.RentedBikeCount))
+            .size([this.width, this.height])
+            .bandwidth(20);
 
-        const contours = densityGenerator(data);
+        const contours = densityGenerator(visData);
 
-        // Define color scale
+        // Define a color scale for the density plot
         const colorScale = d3.scaleSequential(d3.interpolateYlGnBu)
             .domain([0, d3.max(contours, (d) => d.value)]);
 
-        // Render density paths in the densityPlotG group
+        // Render the density plot in the densityPlotG group
         this.densityPlotG.selectAll(".density-path")
             .data(contours)
             .join("path")

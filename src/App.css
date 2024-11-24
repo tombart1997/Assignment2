@@ -1,6 +1,8 @@
 .App {
     text-align: center;
     height: 100%;
+    padding-top: 150px; /* Add space above the top container */
+
 }
 #control-bar-container{
     height: 10%;

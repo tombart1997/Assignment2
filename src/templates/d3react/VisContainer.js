@@ -2,10 +2,12 @@ import './VisContainer.css';
 import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import VisD3 from './Vis-d3';
+import { updateSelectedItem } from '../../redux/DataSetSlice'; // Import your reducer action
 
 function VisContainer() {
     const visData = useSelector((state) => state.dataSet.data); // Full dataset
     const dispatch = useDispatch();
+    const previousSelection = useSelector((state) => state.dataSet.selectedPoints); // Get previous selection
 
     const divContainerRef = useRef(null);
     const visD3Ref = useRef(null);
@@ -33,17 +35,17 @@ function VisContainer() {
     useEffect(() => {
         const visD3 = visD3Ref.current;
 
-        const handleOnEvent1 = function (selectedData) {
-            console.log("Heatmap 1D/2D Selection:", selectedData);
-            // Dispatch selected data if needed
-            // dispatch(reducerAction(selectedData));
+        const handleOnEvent1 = (selectedData) => {
+            // Compare previous selection to avoid unnecessary updates
+            if (JSON.stringify(previousSelection) !== JSON.stringify(selectedData)) {
+                dispatch(updateSelectedItem(selectedData));
+            }
         };
 
         const controllerMethods = {
             handleOnEvent1,
         };
-        visD3.renderDensityPlot(visData)
-        //visD3.renderHeatmap(visData, controllerMethods); // Call heatmap rendering
+        //visD3.renderDensityPlot(visData);
     }, [visData, dispatch]);
 
     return <div ref={divContainerRef} className="visDivContainer"></div>;

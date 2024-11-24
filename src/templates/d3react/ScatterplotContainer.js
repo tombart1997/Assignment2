@@ -15,7 +15,7 @@ function ScatterplotContainer() {
         console.log("VisContainer useEffect (called each time matrix re-renders)");
     }); // if no dependencies, useEffect is called at each re-render
 
-    const divContainerRef=useRef(null);
+    const scatterContainerRef=useRef(null);
     const visD3Ref = useRef(null)
 
     const getCharSize = function(){
@@ -24,10 +24,10 @@ function ScatterplotContainer() {
         // getting size from parent item
         let width = 900;  // Default width
         let height = 400; // Default height
-        if(divContainerRef.current!==undefined){
-            width=divContainerRef.current.offsetWidth || width;
+        if(scatterContainerRef.current!==undefined){
+            width=scatterContainerRef.current.offsetWidth || width;
             // width = '100%';
-            height=divContainerRef.current.offsetHeight ||height;
+            height=scatterContainerRef.current.offsetHeight ||height;
             // height = '100%';
         }
         return {width:width,height:height};
@@ -36,7 +36,7 @@ function ScatterplotContainer() {
     // did mount called once the component did mount
     useEffect(()=>{
         console.log("VisContainer useEffect [] called once the component did mount");
-        const visD3 = new VisD3(divContainerRef.current);
+        const visD3 = new VisD3(scatterContainerRef.current);
         visD3.create({size:getCharSize()});
         visD3Ref.current = visD3;
         return ()=>{
@@ -53,8 +53,6 @@ function ScatterplotContainer() {
         const visD3 = visD3Ref.current;
 
         const handleOnEvent1 = (selectedData) => {
-            console.log("Selected Points:", selectedData);
-
             // Compare previous selection to avoid unnecessary updates
             if (JSON.stringify(previousSelection) !== JSON.stringify(selectedData)) {
                 dispatch(updateSelectedItem(selectedData));
@@ -68,11 +66,11 @@ function ScatterplotContainer() {
             handleOnEvent1: handleOnEvent1,
             handleOnEvent2: handleOnEvent2,
         }
-        visD3.renderVis(visData,controllerMethods);
+        visD3.renderScatterPlot(visData,controllerMethods);
     },[visData,dispatch, previousSelection]);// if dependencies, useEffect is called after each data update, in our case only visData changes.
 
     return(
-        <div ref={divContainerRef} className="visDivContainer">
+        <div ref={scatterContainerRef} className="scatterContainer">
 
         </div>
     )
