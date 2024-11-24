@@ -3,7 +3,6 @@ import { useEffect} from 'react';
 import { useDispatch } from 'react-redux';
 import { getSeoulBikeData } from './redux/DataSetSlice';
 // here import other dependencies
-import VisContainer from './templates/d3react/VisContainer';
 import ScatterplotContainer from './templates/d3react/ScatterplotContainer';
 
 
@@ -25,15 +24,14 @@ function App() {
     <div className="App">
         {console.log("App rendering")}
         <div id="view-container" className="row">
-          {/*<ScatterplotContainer/>*/}
-          <ScatterplotContainer />
-
-          {/* <YourVisContainer/> */}
-          <VisContainer /> 
-
+          {/* Arrange ScatterplotContainer and VisContainer side by side */}
+          <div className="col2">
+            <ScatterplotContainer />
+          </div>
         </div>
     </div>
   );
+  
 }
 
 export default App;

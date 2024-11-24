@@ -1,19 +1,33 @@
 .App {
     text-align: center;
     height: 100%;
+    display: flex;
+    flex-direction: column;
 }
-#control-bar-container{
+
+#control-bar-container {
     height: 10%;
 }
-#view-container{
-    height:80%;
+
+#view-container {
+    display: flex; /* Use flexbox to arrange children */
+    justify-content: space-around; /* Space out the children */
+    height: 80%;
+    margin: 0 auto;
 }
+
 .row:after {
     content: "";
     display: table;
     clear: both;
 }
-.col2{
-    float: left;
-    width: 50%;
+
+.col2 {
+    flex: 1; /* Equal width for both columns */
+    padding: 10px;
+    box-sizing: border-box; /* Include padding in width calculation */
+}
+
+.col2:first-child {
+    border-right: 1px solid #ccc; /* Optional: Add a separator line */
 }

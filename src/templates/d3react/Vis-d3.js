@@ -24,6 +24,10 @@ class VisD3 {
         // Calculate dimensions
         this.width = this.size.width - this.margin.left - this.margin.right;
         this.height = (this.size.height - this.margin.top) / 2; // Divide evenly between plots
+
+
+        // Remove existing SVG (cleanup step)
+        d3.select(this.el).selectAll("svg").remove();
     
         // Define ranges for both graphs
         this.scatterScaleX.range([0, this.width]);
@@ -241,9 +245,12 @@ class VisD3 {
     
 
     renderDensityPlot = function (visData) {
+        if (!visData || visData.length === 0) {
+
         // Set density plot scales to match scatterplot
         this.densityScaleX.domain(this.scatterScaleX.domain());
         this.densityScaleY.domain(this.scatterScaleY.domain());
+        }
     
         // Clear any existing density paths
         this.densityPlotG.selectAll(".density-path").remove();

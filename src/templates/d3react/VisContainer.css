@@ -1,8 +1,0 @@
-.visDivContainer {
-    padding-top: 50px; /* Add space above the containers */
-    width: 80%;
-    height: 50%; /* Slightly smaller to avoid overlap */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  } 
