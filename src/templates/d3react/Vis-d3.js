@@ -22,52 +22,156 @@ class VisD3 {
         console.log('Setting Axis Attributes:', { xAttr, yAttr }); // Log axis attributes
         this.xAttr = xAttr;
         this.yAttr = yAttr;
+        this.updateLabels(); // Update labels dynamically
+
     };
+
 
     create = function (config, visData) {
         console.log('Creating visualization with data:', visData.slice(0, 5)); // Log first 5 rows of data for reference
         this.size = { width: config.size.width, height: config.size.height };
-
+    
         // Calculate dimensions
         this.width = this.size.width - this.margin.left - this.margin.right;
         this.height = (this.size.height - this.margin.top - this.margin.bottom) / 2;
-
+    
         // Remove existing SVG (cleanup step)
         d3.select(this.el).selectAll("svg").remove();
-
-        // Define ranges for the scatterplot
+    
+        // Define ranges for both scatterplot and density plot
         this.scaleX.range([0, this.width]);
         this.scaleY.range([this.height, 0]);
-
-        // Set domains based on the data
+    
+        // Set domains dynamically based on selected attributes
         const xExtent = d3.extent(visData, (d) => d[this.xAttr]);
         const yExtent = d3.extent(visData, (d) => d[this.yAttr]);
         this.scaleX.domain(xExtent);
         this.scaleY.domain(yExtent);
-
+    
         console.log('X Extent:', xExtent, 'Y Extent:', yExtent); // Log axis extents
-
+    
         // Initialize SVG
         this.matSvg = d3.select(this.el).append("svg")
-            .attr("width", 1550)
-            .attr("height", 850)
+            .attr("width", this.size.width)
+            .attr("height", this.size.height + 100) // Extra space for density plot
             .append("g")
             .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
+    
 
+        // Add a clipPath to constrain the density plot without clipping the axes
+        this.matSvg.append("clipPath")
+        .attr("id", "clip-density")
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", this.width)
+        .attr("height", this.height);
+                
         // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
             .attr("class", "scatterplotG");
+    
+        // Add density plot group below scatterplot
+        const densityContainer = this.matSvg.append("g")
+            .attr("class", "densityContainer")
+            .attr("transform", `translate(0, ${this.height + 50})`);
+    
+        this.densityPlotG = densityContainer.append("g")
+            .attr("class", "densityPlotG")
+            .attr("clip-path", "url(#clip-density)"); // Apply the clipPath
 
-        // Add brush layer
-        this.addScatterplotBrush(visData);
+            
+    
+        // Add axes for density plot
+        densityContainer.append('g') // X-Axis
+            .attr('class', 'densityplot-x-axis')
+            .attr('transform', `translate(0, ${this.height})`)
+            .call(d3.axisBottom(this.scaleX));
+    
+        densityContainer.append('g') // Y-Axis
+            .attr('class', 'densityplot-y-axis')
+            .call(d3.axisLeft(this.scaleY));
+    
+        // Add scatterplot axes
+        this.scatterplotG.append('g') // X-Axis
+            .attr('class', 'scatterplot-x-axis')
+            .attr('transform', `translate(0, ${this.height})`)
+            .call(d3.axisBottom(this.scaleX));
+    
+        this.scatterplotG.append('g') // Y-Axis
+            .attr('class', 'scatterplot-y-axis')
+            .call(d3.axisLeft(this.scaleY));
 
-        // Render scatterplot
+
+        // Add labels for scatterplot axes
+        this.scatterplotG.append("text")
+            .attr("class", "scatter-x-axis-label")
+            .attr("x", this.width / 2)
+            .attr("y", this.height + 40) // Position below the x-axis
+            .style("text-anchor", "middle")
+            .text(this.xAttr); // Initial label for x-axis
+
+        this.scatterplotG.append("text")
+            .attr("class", "scatter-y-axis-label")
+            .attr("x", -this.height / 2)
+            .attr("y", -40) // Position to the left of the y-axis
+            .attr("transform", "rotate(-90)")
+            .style("text-anchor", "middle")
+            .text(this.yAttr); // Initial label for y-axis
+
+        // Add labels for density plot axes
+        densityContainer.append("text")
+            .attr("class", "density-x-axis-label")
+            .attr("x", this.width / 2)
+            .attr("y", this.height + 40) // Position below the x-axis
+            .style("text-anchor", "middle")
+            .text(this.xAttr); // Initial label for x-axis
+
+        densityContainer.append("text")
+            .attr("class", "density-y-axis-label")
+            .attr("x", -this.height / 2)
+            .attr("y", -40) // Position to the left of the y-axis
+            .attr("transform", "rotate(-90)")
+            .style("text-anchor", "middle")
+            .text(this.yAttr); // Initial label for y-
+            
+
+        this.updateLabels();
+
+        // Render both plots
         this.renderScatterPlot(visData);
-
+        this.renderDensityPlot(visData);
+    
         setTimeout(() => {
             this.redrawAxes();
         }, 400);
     };
+    
+    updateLabels = function () {
+        if (this.scatterplotG) {
+            // Update scatterplot labels
+            const scatterXLabel = this.scatterplotG.select(".scatter-x-axis-label");
+            if (!scatterXLabel.empty()) scatterXLabel.text(this.xAttr);
+    
+            const scatterYLabel = this.scatterplotG.select(".scatter-y-axis-label");
+            if (!scatterYLabel.empty()) scatterYLabel.text(this.yAttr);
+        } else {
+            console.warn("scatterplotG is not initialized.");
+        }
+    
+        if (this.matSvg) {
+            // Update density plot labels
+            const densityXLabel = this.matSvg.select(".density-x-axis-label");
+            if (!densityXLabel.empty()) densityXLabel.text(this.xAttr);
+    
+            const densityYLabel = this.matSvg.select(".density-y-axis-label");
+            if (!densityYLabel.empty()) densityYLabel.text(this.yAttr);
+        } else {
+            console.warn("matSvg is not initialized.");
+        }
+    };
+    
+
 
     redrawAxes = function () {
         // Redraw scatterplot axes
@@ -117,54 +221,82 @@ class VisD3 {
                     .attr("fill", "blue"),
                 (exit) => exit.remove()
             );
+        this.addScatterplotBrush(visData);
+
     };
     
 
     addScatterplotBrush = function (visData) {
         const brush = d3.brush()
-            .extent([[0, 0], [this.width, this.height]]) // Define the brushing area
-            .on("start", () => {
-                // Temporarily disable pointer-events for the points
-
-                this.scatterplotG.selectAll("circle").style("pointer-events", "none");
+            .extent([[0, 0], [this.width, this.height]])
+            .on("start", ({ selection }) => {
+                // Clear any previous selections and reset density plot
+                this.scatterplotG.selectAll(".brush").call(brush.move, null);
+                this.selectedData = [];
+                this.scatterplotG.selectAll("circle").attr("opacity", 1);
+                this.renderDensityPlot([]);
             })
             .on("brush", ({ selection }) => {
                 if (selection) {
                     const [[x0, y0], [x1, y1]] = selection;
-
-                    // Filter data within the brushed area
+    
                     this.selectedData = visData.filter((d) => {
                         const cx = this.scaleX(d[this.xAttr]);
                         const cy = this.scaleY(d[this.yAttr]);
                         return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
                     });
-                    console.log('Selected Data:', this.selectedData.slice(0, 5)); // Log selected data sample
-
-
-                    // Highlight selected points
+    
                     this.scatterplotG.selectAll("circle")
                         .attr("opacity", (d) =>
                             this.selectedData.includes(d) ? 1 : 0.2
                         );
+    
+                    this.renderDensityPlot(this.selectedData);
                 }
             })
             .on("end", ({ selection }) => {
-                // Re-enable pointer-events for the points
-                this.scatterplotG.selectAll("circle").style("pointer-events", "all");
-
                 if (!selection) {
-                    // Reset selection
                     this.selectedData = [];
-                    this.scatterplotG.selectAll("circle").attr("opacity", 1); // Reset all points
+                    this.scatterplotG.selectAll("circle").attr("opacity", 1);
+                    this.renderDensityPlot([]);
                 }
             });
-
-        // Add the brush as a background layer
-        this.scatterplotG.insert("g", ":first-child") // Ensure the brush is below the points
+    
+        this.scatterplotG.append("g")
             .attr("class", "brush")
-            .call(brush)
-            .style("pointer-events", "all");
+            .call(brush);
     };
+    
+    
+
+    renderDensityPlot = function (visData) {
+        if (!visData || visData.length === 0) {
+            console.warn('No data for density plot');
+            return;
+        }
+    
+        const densityGenerator = d3.contourDensity()
+            .x((d) => this.scaleX(d[this.xAttr]))
+            .y((d) => this.scaleY(d[this.yAttr]))
+            .size([this.width, this.height])
+            .bandwidth(20);
+    
+        const contours = densityGenerator(visData);
+    
+        const colorScale = d3.scaleSequential(d3.interpolateTurbo)
+            .domain([0, d3.max(contours, (d) => d.value)]);
+    
+        this.densityPlotG.selectAll(".density-path")
+            .data(contours)
+            .join("path")
+            .attr("class", "density-path")
+            .attr("d", d3.geoPath())
+            .attr("fill", (d) => colorScale(d.value))
+            .attr("stroke", "none")
+            .attr("opacity", 0.7);
+    };
+    
+
 
     clear = function () {
         d3.select(this.el).selectAll("*").remove();
