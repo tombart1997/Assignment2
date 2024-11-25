@@ -7,6 +7,7 @@
 
 #control-bar-container {
     height: 10%;
+    margin-bottom: 20px; /* Add vertical space below the control bar */
 }
 
 #view-container {
