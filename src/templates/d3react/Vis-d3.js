@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 
 class VisD3 {
-    margin = { top: 0, right: 5, bottom: 0, left: 50 };
+    margin = { top: 100, right: 5, bottom: 0, left: 50 };
     size;
     height;
     width;
@@ -23,9 +23,8 @@ class VisD3 {
     
         // Calculate dimensions
         this.width = this.size.width - this.margin.left - this.margin.right;
-        this.height = (this.size.height - this.margin.top) / 2; // Divide evenly between plots
-
-
+        this.height = (this.size.height - this.margin.top - this.margin.bottom) / 2;
+    
         // Remove existing SVG (cleanup step)
         d3.select(this.el).selectAll("svg").remove();
     
@@ -37,38 +36,54 @@ class VisD3 {
     
         // Initialize SVG
         this.matSvg = d3.select(this.el).append("svg")
-            .attr("width", this.width + this.margin.left + this.margin.right)
-            .attr("height", this.height * 2 + this.margin.top) // Adjusted height
+            .attr("width", 1550)
+            .attr("height", 550)
             .append("g")
-            .attr("class", "matSvgG")
             .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
+    
+        // Add a clipPath to constrain the density plot without clipping the axes
+        this.matSvg.append("clipPath")
+            .attr("id", "clip-density")
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", this.width)
+            .attr("height", this.height);
     
         // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
             .attr("class", "scatterplotG");
     
         // Add density plot group below scatterplot
-        this.densityPlotG = this.matSvg.append("g")
-            .attr("class", "densityPlotG")
-            .attr("transform", `translate(0, ${this.height})`);
+        const densityContainer = this.matSvg.append("g")
+            .attr("class", "densityContainer")
+            .attr("transform", `translate(0, ${this.height + 50})`);
     
-        // Add axes for scatterplot (ONLY ONCE)
+        this.densityPlotG = densityContainer.append("g")
+            .attr("class", "densityPlotG")
+            .attr("clip-path", "url(#clip-density)");
+    
+        // Add axes for density plot outside the clip-path
+        densityContainer.append('g') // X-Axis
+            .attr('class', 'densityplot-x-axis')
+            .attr('transform', `translate(0, ${this.height})`)
+            .call(d3.axisBottom(this.densityScaleX));
+    
+        densityContainer.append('g') // Y-Axis
+            .attr('class', 'densityplot-y-axis')
+            .call(d3.axisLeft(this.densityScaleY));
+    
+        // Add axes for scatterplot
         this.scatterplotG.append('g') // X-Axis
+            .attr('class', 'scatterplot-x-axis')
             .attr('transform', `translate(0, ${this.height})`)
             .call(d3.axisBottom(this.scatterScaleX));
     
         this.scatterplotG.append('g') // Y-Axis
+            .attr('class', 'scatterplot-y-axis')
             .call(d3.axisLeft(this.scatterScaleY));
     
-        // Add axes for density plot (ONLY ONCE)
-        this.densityPlotG.append('g') // X-Axis
-            .attr('transform', `translate(0, ${this.height})`)
-            .call(d3.axisBottom(this.densityScaleX));
-    
-        this.densityPlotG.append('g') // Y-Axis
-            .call(d3.axisLeft(this.densityScaleY));
-    
-        // Add x-axis label for scatterplot
+        // Add labels for scatterplot
         this.scatterplotG.append("text")
             .attr("class", "x-axis-label")
             .attr("x", this.width / 2)
@@ -76,32 +91,31 @@ class VisD3 {
             .style("text-anchor", "middle")
             .text("Temperature (°C)");
     
-        // Add y-axis label for scatterplot
         this.scatterplotG.append("text")
             .attr("class", "y-axis-label")
             .attr("x", -this.height / 2)
-            .attr("y", -40) // Position to the left of the y-axis
+            .attr("y", -30) // Position to the left of the y-axis
             .attr("transform", "rotate(-90)")
             .style("text-anchor", "middle")
             .text("Rented Bike Count");
     
-        // Add x-axis label for density plot
-        this.densityPlotG.append("text")
+        // Add labels for density plot
+        densityContainer.append("text")
             .attr("class", "x-axis-label")
             .attr("x", this.width / 2)
             .attr("y", this.height + 40) // Position below the x-axis
             .style("text-anchor", "middle")
             .text("Temperature (°C)");
     
-        // Add y-axis label for density plot
-        this.densityPlotG.append("text")
+        densityContainer.append("text")
             .attr("class", "y-axis-label")
             .attr("x", -this.height / 2)
-            .attr("y", -40) // Position to the left of the y-axis
+            .attr("y", -30) // Position to the left of the y-axis
             .attr("transform", "rotate(-90)")
             .style("text-anchor", "middle")
             .text("Density");
     };
+    
     
     
 
@@ -324,7 +338,7 @@ addBrushToDensityPlot = function (visData) {
         const contours = densityGenerator(visData);
     
         // Define a color scale for the density plot
-        const colorScale = d3.scaleSequential(d3.interpolateYlGnBu)
+        const colorScale = d3.scaleSequential(d3.interpolateRainbow)
             .domain([0, d3.max(contours, (d) => d.value)]);
     
         // Render the density plot
@@ -335,7 +349,20 @@ addBrushToDensityPlot = function (visData) {
             .attr("d", d3.geoPath())
             .attr("fill", (d) => colorScale(d.value))
             .attr("stroke", "none")
-            .attr("opacity", 0.7);
+            //.attr("opacity", 0.7);
+            .attr("opacity", (d) => {
+                // Check if the contour crosses the axes
+                const crossesXAxis = d.coordinates.some((ring) =>
+                    ring.some((point) => point[1] === 0) // y-coordinate equals 0 (x-axis)
+                );
+    
+                const crossesYAxis = d.coordinates.some((ring) =>
+                    ring.some((point) => point[0] === 0) // x-coordinate equals 0 (y-axis)
+                );
+    
+                // Adjust opacity based on overlap with axes
+                return crossesXAxis || crossesYAxis ? 0 : 1;
+            });
 
             this.addBrushToDensityPlot(visData);
 
