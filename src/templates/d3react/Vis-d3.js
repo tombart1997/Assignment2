@@ -18,7 +18,7 @@ class VisD3 {
         this.el = el;
     }
     
-    create = function (config) {
+    create = function (config, visData) {
         this.size = { width: config.size.width, height: config.size.height };
     
         // Calculate dimensions
@@ -33,6 +33,14 @@ class VisD3 {
         this.scatterScaleY.range([this.height, 0]); // Reverse y-axis
         this.densityScaleX.range([0, this.width]);
         this.densityScaleY.range([this.height, 0]);
+        // Set domains based on the data
+        const temperatureExtent = d3.extent(visData, (d) => d.Temperature);
+        const rentedBikeCountExtent = d3.extent(visData, (d) => d.RentedBikeCount);
+        this.scatterScaleX.domain(temperatureExtent);
+        this.scatterScaleY.domain(rentedBikeCountExtent);
+
+        this.densityScaleX.domain(temperatureExtent);
+        this.densityScaleY.domain(rentedBikeCountExtent);
     
         // Initialize SVG
         this.matSvg = d3.select(this.el).append("svg")
@@ -49,6 +57,7 @@ class VisD3 {
             .attr("y", 0)
             .attr("width", this.width)
             .attr("height", this.height);
+
     
         // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
@@ -97,7 +106,7 @@ class VisD3 {
             .attr("y", -30) // Position to the left of the y-axis
             .attr("transform", "rotate(-90)")
             .style("text-anchor", "middle")
-            .text("Rented Bike Count");
+            .text("Rented Bikes");
     
         // Add labels for density plot
         densityContainer.append("text")
@@ -113,9 +122,31 @@ class VisD3 {
             .attr("y", -30) // Position to the left of the y-axis
             .attr("transform", "rotate(-90)")
             .style("text-anchor", "middle")
-            .text("Density");
+            .text("Rented Bikes");
+
+
+            setTimeout(() => {
+                this.redrawAxes();
+            }, 400);
+            
+
     };
     
+    redrawAxes = function () {
+        // Redraw scatterplot axes
+        this.scatterplotG.select('.scatterplot-x-axis')
+            .call(d3.axisBottom(this.scatterScaleX).ticks(5).tickFormat(d3.format(".2f")));
+    
+        this.scatterplotG.select('.scatterplot-y-axis')
+            .call(d3.axisLeft(this.scatterScaleY).ticks(5).tickFormat(d3.format(".2f")));
+    
+        // Redraw density plot axes
+        d3.select('.densityplot-x-axis')
+            .call(d3.axisBottom(this.densityScaleX).ticks(5).tickFormat(d3.format(".2f")));
+    
+        d3.select('.densityplot-y-axis')
+            .call(d3.axisLeft(this.densityScaleY).ticks(5).tickFormat(d3.format(".2f")));
+    };
     
     
 
@@ -143,7 +174,6 @@ class VisD3 {
     
                 this.scatterplotG.select(".x-axis").call(d3.axisBottom(this.scatterScaleX));
                 this.scatterplotG.select(".y-axis").call(d3.axisLeft(this.scatterScaleY));
-    
                 // Redraw density plot
                 this.renderDensityPlot(this.selectedData.length ? this.selectedData : this.fullData);
             });
@@ -365,6 +395,9 @@ addBrushToDensityPlot = function (visData) {
             });
 
             this.addBrushToDensityPlot(visData);
+            setTimeout(() => {
+                this.redrawAxes();
+            }, 100);
 
     };
     

@@ -36,8 +36,9 @@ function ScatterplotContainer() {
     // did mount called once the component did mount
     useEffect(()=>{
         console.log("VisContainer useEffect [] called once the component did mount");
+        console.log(visData);
         const visD3 = new VisD3(scatterContainerRef.current);
-        visD3.create({size:getCharSize()});
+        visD3.create({size:getCharSize()}, visData);
         visD3Ref.current = visD3;
         return ()=>{
             // did unmout, the return function is called once the component did unmount (removed for the screen)
@@ -74,6 +75,8 @@ function ScatterplotContainer() {
 
         </div>
     )
+
+    
 }
 
 
