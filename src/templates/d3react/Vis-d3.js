@@ -287,63 +287,73 @@ class VisD3 {
             .call(brush);
     };
 
-addBrushToDensityPlot = function (visData) {
-
-    const brush = d3.brush()
-        .extent([[0, 0], [this.width, this.height]]) // Define the brushing area
-
-        .on("brush", ({ selection }) => {
-                   
-            if (!selection || selection.length < 2) {
-                console.warn("Brush selection is invalid or undefined");
-                return;
-            }
-            
-            const [[x0, y0], [x1, y1]] = selection;
-
-            // Map the brushed area to the density plot's scales
-            const newXDomain = [this.densityScaleX.invert(x0), this.densityScaleX.invert(x1)];
-            const newYDomain = [this.densityScaleY.invert(y1), this.densityScaleY.invert(y0)];
-
-            // Filter the data within the selected area
-            this.selectedData = visData.filter((d) => {
-                const cx = this.densityScaleX(d.Temperature);
-                const cy = this.densityScaleY(d.RentedBikeCount);
-                return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
-            });
-            // Optionally highlight the selected region
-            this.densityPlotG.selectAll(".density-path")
-                .attr("opacity", (d) => {
-                    if (!d.coordinates || !d.coordinates[0] || !d.coordinates[0][0] || !d.coordinates[0][1]) {
-                        // If coordinates are not valid, skip this contour
-                        return 0.3;
-                    }
-
-                    const contourMidX = (d.coordinates[0][0][0] + d.coordinates[0][1][0]) / 2;
-                    const contourMidY = (d.coordinates[0][0][1] + d.coordinates[0][1][1]) / 2;
-
-                    return (x0 <= contourMidX && contourMidX <= x1 && y0 <= contourMidY && contourMidY <= y1) ? 1 : 0.3;
+    addBrushToDensityPlot = function (visData) {
+        const brush = d3.brush()
+            .extent([[0, 0], [this.width, this.height]]) // Define the brushing area
+            .on("brush", ({ selection }) => {
+                if (!selection || selection.length < 2) {
+                    console.warn("Brush selection is invalid or undefined");
+                    return;
+                }
+    
+                const [[x0, y0], [x1, y1]] = selection;
+    
+                // Map the brushed area to the density plot's scales
+                const newXDomain = [this.densityScaleX.invert(x0), this.densityScaleX.invert(x1)];
+                const newYDomain = [this.densityScaleY.invert(y1), this.densityScaleY.invert(y0)];
+    
+                // Filter the data within the selected area
+                this.selectedData = visData.filter((d) => {
+                    const cx = this.densityScaleX(d.Temperature);
+                    const cy = this.densityScaleY(d.RentedBikeCount);
+                    return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;
                 });
-
-        })    
-
-        .on("end", ({ selection }) => {
-            if (!selection) {
-                console.log("Brush cleared, resetting density plot");
-                this.selectedData = [];
-                this.densityPlotG.selectAll(".density-path").attr("opacity", 1);
-                return;
-            }
-            console.log("Brush end selection:", selection);
-        });
-
-    // Append the brush to the density plot group
-    this.densityPlotG.append("g")
-        .attr("class", "density-brush")
-        .call(brush);
- 
-};
-
+    
+                // Optionally highlight the selected region in the density plot
+                this.densityPlotG.selectAll(".density-path")
+                    .attr("opacity", (d) => {
+                        if (!d.coordinates || !d.coordinates[0]) return 0.3;
+    
+                        const contourMidX = d3.mean(d.coordinates[0].map((point) => point[0]));
+                        const contourMidY = d3.mean(d.coordinates[0].map((point) => point[1]));
+    
+                        return x0 <= contourMidX && contourMidX <= x1 && y0 <= contourMidY && contourMidY <= y1
+                            ? 1
+                            : 0.3;
+                    });
+    
+                // Highlight corresponding points in the scatterplot
+                this.scatterplotG.selectAll("circle")
+                    .attr("fill", (d) =>
+                        this.selectedData.some(
+                            (selected) => selected.Temperature === d.Temperature && selected.RentedBikeCount === d.RentedBikeCount
+                        )
+                            ? "blue" // Highlighted color
+                            : "red" // Default color
+                    )
+                    .attr("opacity", (d) =>
+                        this.selectedData.some(
+                            (selected) => selected.Temperature === d.Temperature && selected.RentedBikeCount === d.RentedBikeCount
+                        )
+                            ? 1
+                            : 0.2 // Dim non-selected points
+                    );
+            })
+            .on("end", ({ selection }) => {
+                if (!selection) {
+                    // Reset everything when the brush is cleared
+                    this.selectedData = [];
+                    this.densityPlotG.selectAll(".density-path").attr("opacity", 1); // Reset density plot
+                    this.scatterplotG.selectAll("circle").attr("fill", "red").attr("opacity", 1); // Reset scatterplot points
+                }
+            });
+    
+        // Append the brush to the density plot group
+        this.densityPlotG.append("g")
+            .attr("class", "density-brush")
+            .call(brush);
+    };
+    
     
     
 
