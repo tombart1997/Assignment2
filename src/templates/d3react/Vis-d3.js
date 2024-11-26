@@ -13,6 +13,8 @@ class VisD3 {
     densityScaleX = d3.scaleLinear(); // Density plot x-axis scale
     densityScaleY = d3.scaleLinear(); // Density plot y-axis scale
     selectedData = []; // Store data selected via brushing
+    redrawTimeout; // Declare timeout for debouncing
+
 
     xAttr = 'Hour'; // Default x-axis attribute
     yAttr = 'RentedBikeCount'; // Default y-axis attribute
@@ -244,6 +246,7 @@ class VisD3 {
             );
 
         this.addScatterplotBrush(controllerMethods, visData);
+        this.renderDensityPlot(visData);
     };
 
 
@@ -313,68 +316,72 @@ class VisD3 {
     };
 
     renderDensityPlot = function (visData) {
-        if (!visData || visData.length === 0) {
-
-        // Set density plot scales to match scatterplot
-        this.densityScaleX.domain(this.scatterScaleX.domain());
-        this.densityScaleY.domain(this.scatterScaleY.domain());
-        }
+        const processedData = visData.map((d, index) => ({
+            ...d,
+            x: d[this.xAttr],
+            y: d[this.yAttr],
+            index,
+        }));
     
-        // Clear any existing density paths
-        this.densityPlotG.selectAll(".density-path").remove();
+        if (this.redrawTimeout) clearTimeout(this.redrawTimeout);
+        this.redrawTimeout = setTimeout(() => {
+            if (!processedData || processedData.length === 0) {
+                // Set density plot scales to match scatterplot scales if no data
+                this.densityScaleX.domain(this.scatterScaleX.domain());
+                this.densityScaleY.domain(this.scatterScaleY.domain());
+            } else {
+                // Update scales to match the data extent
+                this.densityScaleX.domain(d3.extent(processedData, (d) => d.x));
+                this.densityScaleY.domain(d3.extent(processedData, (d) => d.y));
+            }
     
-        // Create a density generator
-        const densityGenerator = d3.contourDensity()
-            .x((d) => this.densityScaleX(d.x))
-            .y((d) => this.densityScaleY(d.y))
-            .size([this.width, this.height])
-            .bandwidth(20);
+            // Clear any existing density paths
+            this.densityPlotG.selectAll(".density-path").remove();
     
-        const contours = densityGenerator(visData);
+            // Create a density generator
+            const densityGenerator = d3.contourDensity()
+                .x((d) => this.densityScaleX(d.x))
+                .y((d) => this.densityScaleY(d.y))
+                .size([this.width, this.height])
+                .bandwidth(20);
     
-        // Define a color scale for the density plot
-        const colorScale = d3.scaleSequential(d3.interpolateViridis)
-            .domain([0, d3.max(contours, (d) => d.value)]);
-
-        // Render the density plot
-        this.densityPlotG.selectAll(".density-path")
-            .data(contours)
-            .join("path")
-            .attr("class", "density-path")
-            .attr("d", d3.geoPath())
-            .attr("fill", (d) => colorScale(d.value))
-            .attr("stroke", "none")
-            //.attr("opacity", 0.7);
-            .attr("opacity", (d) => {
-                // Check if the contour crosses the axes
-                const crossesXAxis = d.coordinates.some((ring) =>
-                    ring.some((point) => point[1] === 0) // y-coordinate equals 0 (x-axis)
-                );
+            const contours = densityGenerator(processedData);
     
-                const crossesYAxis = d.coordinates.some((ring) =>
-                    ring.some((point) => point[0] === 0) // x-coordinate equals 0 (y-axis)
-                );
+            // Define a color scale for the density plot
+            const colorScale = d3.scaleSequential(d3.interpolateViridis)
+                .domain([0, d3.max(contours, (d) => d.value)]);
     
-                // Adjust opacity based on overlap with axes
-                return crossesXAxis || crossesYAxis ? 0 : 1;
-            });
-
+            // Render the density plot
+            this.densityPlotG.selectAll(".density-path")
+                .data(contours)
+                .join("path")
+                .attr("class", "density-path")
+                .attr("d", d3.geoPath())
+                .attr("fill", (d) => colorScale(d.value))
+                .attr("stroke", "none")
+                .attr("opacity", 0.7);
+    
+            // Render all data points as circles
             this.densityPlotG.selectAll("circle")
-            .data(visData)
-            .join("circle")
-            .attr("class", "data-point")
-            .attr("cx", (d) => this.densityScaleX(d.x))
-            .attr("cy", (d) => this.densityScaleY(d.y))
-            .attr("r", 2)
-            .attr("fill", "orange")
-            .attr("opacity", 0.5);
-
-            this.addBrushToDensityPlot(visData);
+                .data(processedData)
+                .join("circle")
+                .attr("class", "data-point")
+                .attr("cx", (d) => this.densityScaleX(d.x))
+                .attr("cy", (d) => this.densityScaleY(d.y))
+                .attr("r", 1)
+                .attr("fill", "white")
+                .attr("opacity", 0.5);
+    
+            // Add brush functionality to the density plot
+            this.addBrushToDensityPlot(processedData);
+    
+            // Optionally redraw axes to reflect updated scales
             setTimeout(() => {
                 this.redrawAxes();
             }, 100);
-
+        }, 50);
     };
+    
     
 
     
@@ -420,7 +427,7 @@ class VisD3 {
                         this.selectedData.some(
                             (selected) => selected.x === d.x && selected.y === d.y
                         )
-                            ? "green" // Highlighted color
+                            ? "red" // Highlighted color
                             : "blue" // Default color
                     )
                     .attr("opacity", (d) =>
