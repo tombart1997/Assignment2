@@ -244,7 +244,7 @@ class VisD3 {
         selection.select("circle")
             .attr("cx", (d) => this.scatterScaleX(d.x))
             .attr("cy", (d) => this.scatterScaleY(d.y))
-            .attr("fill", "red");
+            .attr("fill", "blue");
 
     };
 
@@ -325,7 +325,7 @@ class VisD3 {
         const contours = densityGenerator(visData);
     
         // Define a color scale for the density plot
-        const colorScale = d3.scaleSequential(d3.interpolateRainbow)
+        const colorScale = d3.scaleSequential(d3.interpolateViridis)
             .domain([0, d3.max(contours, (d) => d.value)]);
     
         // Render the density plot
@@ -402,8 +402,8 @@ class VisD3 {
                         this.selectedData.some(
                             (selected) => selected.x === d.x && selected.y === d.y
                         )
-                            ? "blue" // Highlighted color
-                            : "red" // Default color
+                            ? "green" // Highlighted color
+                            : "blue" // Default color
                     )
                     .attr("opacity", (d) =>
                         this.selectedData.some(
