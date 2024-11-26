@@ -112,37 +112,35 @@ class PlotD3 {
             .attr('class', 'scatterplot-y-axis')
             .call(d3.axisLeft(this.scatterScaleY));
     
-        // Add labels for scatterplot
+        // Add axis labels
         this.scatterplotG.append("text")
-            .attr("class", "x-axis-label")
+            .attr("class", "x-axis-label scatterplot-x-axis-label")
             .attr("x", this.width / 2)
-            .attr("y", this.height + 40) // Position below the x-axis
-            .style("text-anchor", "middle")
-            .text("Temperature (°C)");
-    
+            .attr("y", this.height + 40)
+            .style("text-anchor", "middle");
+
         this.scatterplotG.append("text")
-            .attr("class", "y-axis-label")
+            .attr("class", "y-axis-label scatterplot-y-axis-label")
             .attr("x", -this.height / 2)
-            .attr("y", -30) // Position to the left of the y-axis
+            .attr("y", -30)
             .attr("transform", "rotate(-90)")
-            .style("text-anchor", "middle")
-            .text("Rented Bikes");
-    
-        // Add labels for density plot
+            .style("text-anchor", "middle");
+
         densityContainer.append("text")
-            .attr("class", "x-axis-label")
+            .attr("class", "x-axis-label density-x-axis-label")
             .attr("x", this.width / 2)
-            .attr("y", this.height + 40) // Position below the x-axis
-            .style("text-anchor", "middle")
-            .text("Temperature (°C)");
-    
+            .attr("y", this.height + 40)
+            .style("text-anchor", "middle");
+
         densityContainer.append("text")
-            .attr("class", "y-axis-label")
+            .attr("class", "y-axis-label density-y-axis-label")
             .attr("x", -this.height / 2)
-            .attr("y", -30) // Position to the left of the y-axis
+            .attr("y", -30)
             .attr("transform", "rotate(-90)")
-            .style("text-anchor", "middle")
-            .text("Rented Bikes");
+            .style("text-anchor", "middle");
+
+            
+        this.updateLabels();
 
 
             setTimeout(() => {
@@ -153,28 +151,25 @@ class PlotD3 {
     };
     
     updateLabels = function () {
+        // Update scatterplot labels
         if (this.scatterplotG) {
-            // Update scatterplot labels
-            const scatterXLabel = this.scatterplotG.select(".scatter-x-axis-label");
-            if (!scatterXLabel.empty()) scatterXLabel.text(this.xAttr);
+            this.scatterplotG.select(".scatterplot-x-axis-label")
+                .text(this.xAttr);
     
-            const scatterYLabel = this.scatterplotG.select(".scatter-y-axis-label");
-            if (!scatterYLabel.empty()) scatterYLabel.text(this.yAttr);
-        } else {
-            console.warn("scatterplotG is not initialized.");
+            this.scatterplotG.select(".scatterplot-y-axis-label")
+                .text(this.yAttr);
         }
     
+        // Update density plot labels
         if (this.matSvg) {
-            // Update density plot labels
-            const densityXLabel = this.matSvg.select(".density-x-axis-label");
-            if (!densityXLabel.empty()) densityXLabel.text(this.xAttr);
+            this.matSvg.select(".density-x-axis-label")
+                .text(this.xAttr);
     
-            const densityYLabel = this.matSvg.select(".density-y-axis-label");
-            if (!densityYLabel.empty()) densityYLabel.text(this.yAttr);
-        } else {
-            console.warn("matSvg is not initialized.");
+            this.matSvg.select(".density-y-axis-label")
+                .text(this.yAttr);
         }
     };
+    
     
 
     redrawAxes = function () {
