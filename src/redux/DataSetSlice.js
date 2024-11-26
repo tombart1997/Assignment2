@@ -37,7 +37,6 @@ export const dataSetSlice = createSlice({
       }
     },
     updateAxisAttributes: (state, action) => {
-      console.log("updateAxistAttributes X:", action.payload.xAttr, " Y: ", action.payload.yAttr);
       // Update x and y axis attributes
       state.xAttr = action.payload.xAttr;
       state.yAttr = action.payload.yAttr;

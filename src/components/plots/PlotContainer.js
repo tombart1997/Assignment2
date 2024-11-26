@@ -1,10 +1,10 @@
-import './ScatterplotContainer.css';
+import './PlotContainer.css';
 import { useEffect, useRef, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import VisD3 from './Vis-d3';
+import PlotD3 from './PlotD3';
 import { updateSelectedItem } from '../../redux/DataSetSlice';
 
-function ScatterplotContainer() {
+function PlotContainer() {
     const visData = useSelector((state) => state.dataSet.data);
     const previousSelection = useSelector((state) => state.dataSet.selectedPoints);
     const xAttr = useSelector((state) => state.dataSet.xAttr);
@@ -30,21 +30,18 @@ function ScatterplotContainer() {
             }
         },
         handleOnEvent2: (payload) => {
-            console.log('Event triggered:', payload);
         },
     }), [previousSelection, dispatch]); // Added `previousSelection` and `dispatch` as dependencies.
 
     // Initialize VisD3 instance on mount and cleanup on unmount
     useEffect(() => {
-        console.log('ScatterplotContainer mounted.');
-        const visD3 = new VisD3(scatterContainerRef.current);
+        const visD3 = new PlotD3(scatterContainerRef.current);
         visD3Ref.current = visD3;
 
         visD3.setAxisAttributes(xAttr, yAttr);
         visD3.create({ size: getCharSize }, visData);
 
         return () => {
-            console.log('ScatterplotContainer unmounted.');
             visD3.clear();
         };
     }, [getCharSize, visData, xAttr, yAttr]); // Added all dependencies used within the effect.
@@ -53,13 +50,12 @@ function ScatterplotContainer() {
     useEffect(() => {
         const visD3 = visD3Ref.current;
         if (visD3) {
-            console.log('Updating scatterplot with new data or attributes.');
             visD3.setAxisAttributes(xAttr, yAttr);
             visD3.renderScatterPlot(visData, controllerMethods);
         }
     }, [visData, xAttr, yAttr, controllerMethods]); // Added `controllerMethods` as it is memoized and may change.
 
-    return <div ref={scatterContainerRef} className="scatterContainer"></div>;
+    return <div ref={scatterContainerRef} className="plotContainer"></div>;
 }
 
-export default ScatterplotContainer;
+export default PlotContainer;

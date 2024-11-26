@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-class VisD3 {
+class PlotD3 {
     margin = { top: 100, right: 5, bottom: 0, left: 50 };
     size;
     height;
@@ -24,7 +24,6 @@ class VisD3 {
     }
 
     setAxisAttributes = function (xAttr, yAttr) {
-        console.log('Setting Axis Attributes:', { xAttr, yAttr }); // Log axis attributes
         this.xAttr = xAttr;
         this.yAttr = yAttr;
         this.updateLabels(); // Update labels dynamically
@@ -294,7 +293,6 @@ class VisD3 {
                     // Update density plot scales and render
                     this.densityScaleX.domain(newXDomain);
                     this.densityScaleY.domain(newYDomain);
-                    console.log("selected data:", this.selectedData);
                     this.renderDensityPlot(this.selectedData);
                 }
             })
@@ -459,4 +457,4 @@ class VisD3 {
     };
 }
 
-export default VisD3;
+export default PlotD3;
