@@ -73,15 +73,23 @@ class VisD3 {
         // Add scatterplot group
         this.scatterplotG = this.matSvg.append("g")
             .attr("class", "scatterplotG");
+
+
     
         // Add density plot group below scatterplot
         const densityContainer = this.matSvg.append("g")
             .attr("class", "densityContainer")
             .attr("transform", `translate(0, ${this.height + 50})`);
+
+
+
     
         this.densityPlotG = densityContainer.append("g")
             .attr("class", "densityPlotG")
             .attr("clip-path", "url(#clip-density)");
+
+
+        
     
         // Add axes for density plot outside the clip-path
         densityContainer.append('g') // X-Axis
@@ -327,7 +335,7 @@ class VisD3 {
         // Define a color scale for the density plot
         const colorScale = d3.scaleSequential(d3.interpolateViridis)
             .domain([0, d3.max(contours, (d) => d.value)]);
-    
+
         // Render the density plot
         this.densityPlotG.selectAll(".density-path")
             .data(contours)
@@ -350,6 +358,16 @@ class VisD3 {
                 // Adjust opacity based on overlap with axes
                 return crossesXAxis || crossesYAxis ? 0 : 1;
             });
+
+            this.densityPlotG.selectAll("circle")
+            .data(visData)
+            .join("circle")
+            .attr("class", "data-point")
+            .attr("cx", (d) => this.densityScaleX(d.x))
+            .attr("cy", (d) => this.densityScaleY(d.y))
+            .attr("r", 2)
+            .attr("fill", "orange")
+            .attr("opacity", 0.5);
 
             this.addBrushToDensityPlot(visData);
             setTimeout(() => {
